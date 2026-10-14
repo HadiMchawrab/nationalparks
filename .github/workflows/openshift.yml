@@ -22,6 +22,9 @@ jobs:
     name: Build and push to GitHub Container Registry
     runs-on: ubuntu-24.04
     environment: development
+    permissions:
+      contents: read
+      packages: write
 
     outputs:
       ROUTE: ${{ steps.deploy-and-expose.outputs.route }}
