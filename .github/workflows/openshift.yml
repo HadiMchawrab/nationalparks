@@ -66,9 +66,14 @@ jobs:
           namespace: ${{ env.OPENSHIFT_NAMESPACE }}
 
       # Deploy the image identified by the commit SHA
-      - name: Deploy application
+      - name: Deploy to OpenShift
+        env:
+          OPENSHIFT_NAMESPACE: r-elchami-dev
+          IMAGE_REGISTRY: ghcr.io/hadimchawrab
+          IMAGE_NAME: nationalparks
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          bash "${GITHUB_WORKSPACE}/.github/script.sh" \
-            "${{ env.APP_NAME }}" \
-            "${{ env.IMAGE_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}" \
-            "${{ env.OPENSHIFT_NAMESPACE }}"
+          bash .github/script.sh \
+            "$IMAGE_NAME" \
+            "$IMAGE_REGISTRY/$IMAGE_NAME:$IMAGE_TAG" \
+            "$OPENSHIFT_NAMESPACE"
