@@ -3,7 +3,7 @@ name: OpenShift
 env:
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   REGISTRY_USER: ${{ github.actor }}
-  REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+  REGISTRY_PASSWORD: ${{ github.token }}
   APP_NAME: nationalparks
   IMAGE_TAGS: latest ${{ github.sha }}
 
@@ -19,23 +19,19 @@ on:
 
 jobs:
   build-and-push:
-    name: Build and push to GitHub Container Registry
+    name: Build and push Java image to GitHub Container Registry
     runs-on: ubuntu-24.04
     environment: development
+
     permissions:
       contents: read
       packages: write
 
-    outputs:
-      ROUTE: ${{ steps.deploy-and-expose.outputs.route }}
-      SELECTOR: ${{ steps.deploy-and-expose.outputs.selector }}
-
     steps:
       - name: Checkout
-        id: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      # Build the application image
+      # Build the Java application image with S2I
       - name: S2I Build
         id: build_image
         uses: redhat-actions/s2i-build@v2
@@ -45,7 +41,7 @@ jobs:
           image: ${{ env.APP_NAME }}
           tags: ${{ env.IMAGE_TAGS }}
 
-      # Push the image to GitHub Container Registry
+      # Push the image to GHCR
       - name: Push to Registry
         id: push-to-registry
         uses: redhat-actions/push-to-registry@v3
@@ -56,7 +52,11 @@ jobs:
           username: ${{ env.REGISTRY_USER }}
           password: ${{ env.REGISTRY_PASSWORD }}
 
-      # Log in to OpenShift
+      # Install the OpenShift CLI
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      # Log in to the Developer Sandbox
       - name: Log in to OpenShift
         uses: redhat-actions/oc-login@v1
         with:
@@ -65,10 +65,10 @@ jobs:
           insecure_skip_tls_verify: true
           namespace: ${{ env.OPENSHIFT_NAMESPACE }}
 
-      # Deploy the newly pushed image
+      # Deploy the image identified by the commit SHA
       - name: Deploy application
         run: |
-          "${GITHUB_WORKSPACE}/.github/script.sh" \
+          bash "${GITHUB_WORKSPACE}/.github/script.sh" \
             "${{ env.APP_NAME }}" \
-            "${{ env.IMAGE_REGISTRY }}/${{ steps.build_image.outputs.image }}:${{ github.sha }}" \
+            "${{ env.IMAGE_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}" \
             "${{ env.OPENSHIFT_NAMESPACE }}"
